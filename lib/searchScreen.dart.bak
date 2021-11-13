@@ -1,0 +1,162 @@
+///Readme
+NOTE:
+/* * replace searchScreen.dart code with this code if you donot want to
+    use extra gettingWeather.dart.
+ * Both Work the same ,Nothing changes
+ * Created gettingWeather dart for seperating Method from UI design */
+
+
+
+
+
+import 'package:flutter/material.dart';
+import 'package:weather_app/weatherScreen.dart';
+import 'package:weather_app/widgets.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
+import 'database.dart';
+
+class SearchScreen extends StatefulWidget {
+  String username = "";
+  SearchScreen(this.username);
+
+  @override
+  _SearchScreenState createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends State<SearchScreen> {
+  Database database = new Database();
+
+  TextEditingController locationTextEditingController =
+      new TextEditingController();
+
+  String location = "London";
+  String condition = "mostly sunny";
+  // String temp_C = "70";
+  late int temp_C,temp_F,feelsLike_C,feelsLike_F;
+
+  // String temp_F = "20";
+  // String feelsLike_C = "73";
+  // String feelsLike_F = "20";
+  String day = "Friday";
+
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.of(context).size.height;
+    final width = MediaQuery.of(context).size.width;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.username + ": Weather App"),
+      ),
+      body: Container(
+        width: width,
+        height: height,
+        color: Colors.black,
+        child: Column(
+          children: [
+            Text(
+              "County name to search",
+              style: simpleTextStyle(),
+            ),
+            SizedBox(
+              height: 10,
+            ),
+            Container(
+              width: width / 1.5,
+              child: TextFormField(
+                  controller: locationTextEditingController,
+                  style: mediumTextStyle(),
+                  decoration: textFieldInputDecoration("Country Name")),
+            ),
+            SizedBox(
+              height: height / 9.5,
+            ),
+            GestureDetector(
+              onTap: () {
+                weatherConnection();
+              },
+              child: Container(
+                alignment: Alignment.center,
+                width: width / 2,
+                padding: EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [Color(0xff007EF4), Color(0xff2A75BC)]),
+                    borderRadius: BorderRadius.circular(38)),
+                child: Text(
+                  "Search",
+                  style: TextStyle(fontSize: 30, color: Colors.white54),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  weatherConnection() async {
+    String location = "";
+    String weatherUrl =
+        "http://api.weatherapi.com/v1/current.json?key=df59eb1569994de282c112235211011&q=" +
+            locationTextEditingController.text +
+            "&aqi=no";
+// String weatherUrl ="http://www.omdbapi.com/?i=tt3896198&apikey=6fd1e91e";
+
+    final response = await http.get(Uri.parse(weatherUrl));
+    if (response.statusCode == 200) {
+      final data2 = jsonDecode(response.body);
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      double temp;
+
+      print("connection success");
+      print(response.body.toString());
+      setState(() {
+        location = data2["location"]["name"];
+        String _date = data2["location"]["localtime"].toString();
+        condition = data2["current"]["condition"]["icon"];
+        // temp_C = data2["current"]["temp_c"].toString();
+        temp = (data2["current"]["temp_c"]);
+        temp_C=temp.round();
+
+        temp = data2["current"]["temp_f"];
+        temp_F=temp.round();
+        temp = data2["current"]["feelslike_c"];
+        feelsLike_C=temp.round();
+        temp = data2["current"]["feelslike_f"];
+        feelsLike_F=temp.round();
+        print(data2);
+        print("location=" + location);
+        print("location=" + _date);
+        print("condition=" + condition);
+        // print("temp in c =" + temp_C);
+        print("temp in c =" + temp_C.toString());
+
+        print("temp in f=" + temp_F.toString());
+        print("feels like in c=" + feelsLike_C.toString());
+        print("feels like in f=" + feelsLike_F.toString());
+
+        DateTime now = DateTime.now();
+        // String day = DateFormat('EEEE').format(DateTime.now());
+        DateTime date = new DateFormat("yyyy-MM-dd HH:mm").parse(_date);
+        day = DateFormat('EEEE').format(date);
+        print(day);
+
+        //inserting in the database
+         database.connection(location, locationTextEditingController.text);
+        //navigating to the weatherReport Screen
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => WeatherScreen(location, condition, temp_C,
+                    temp_F, feelsLike_C, feelsLike_F, day)));
+      });
+    } else {
+      print("connection failed");
+      print(response.body);
+    }
+  }
+}
